@@ -1,14 +1,8 @@
 //Servo Motor*********************************************************************************************************
-#include <LiquidCrystal.h>
-#include <IRremoteTools.h>
-#include <IRremoteInt.h>
-#include <IRremote.h>
-#include <Multiplexer.h>
-#include <LineFollow.h>
-#include <EasyTransfer2.h>
-#include <ArduinoRobotMotorBoard.h>
 #include <Servo.h>
 Servo myservo;
+
+
 
 
 //Keypad*************************************************************************************************************
@@ -25,6 +19,7 @@ byte rowPins[ROWS] = { 36, 34, 32, 30 }; //connect to the row pinouts of the key
 byte colPins[COLS] = { 28, 26, 24, 22 }; //connect to the column pinouts of the keypad
 //initialize an instance of class NewKeypad
 Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
+
 
 
 
@@ -81,6 +76,7 @@ LedControl lc = LedControl(12, 10, 11, 1);
 
 void setup() {
     //Servo******
+    myservo.attach(7);
     puerta(false);
     //**********
         
@@ -116,8 +112,17 @@ void loop() {
     if (mfrc522.PICC_IsNewCardPresent())
     {
         Serial.print(F("Tarjeta detectada! => "));
+        escribir("RFID");
+        delay(500);
         if (comprobacionRFID()) {
-            escribir();
+            escribir("RFID OK");
+            delay(1000);
+
+            escribir("TECLADO");
+            if (comprobacionTeclado()) {
+                escribir("TECLADO OK");
+                puerta(true);
+            }
         }
 
         
@@ -160,18 +165,45 @@ void printArray(byte* buffer, byte bufferSize) {
 
 
 
-
 //Útiles*****************************************************************************************
 
 
 
 boolean comprobacionTeclado() {
+ 
+    char temp[5];
+    char customKey;
+    int pos = 0;
+    int cur = 0;
+
+    //********************PASSWORD
+    char password[4] = { '1','2','3','4' };
+    //********************PASSWORD
+
+    boolean out = true;
+
+    while (out) {
+        customKey = customKeypad.getKey();
+        if (customKey == password[pos]) {            
+            pos++; // aumentamos posicion si es correcto el digito
+            cur++;
+        }
+
+        if (pos == 4) {
+            pos = 0;
+            cur = 0;            
+            delay(2000);
+            out = false;
+            return true;
+        }
+    }
 
 }
 
 
 
 void puerta(boolean a) {
+    
     if (a == false) { //Cierra la puerta
 
         myservo.write(0);// move servos to center position -> 90°
@@ -180,14 +212,17 @@ void puerta(boolean a) {
     else if (a == true) {//Abre la puerta
 
         myservo.write(180);// move servos to center position -> 90°
-
+        delay(5000);
+        puerta(false);
     }
+    
 }
 
-void escribir() {
+
+void escribir(String a) {
 
     /* here is the data for the characters */
-    byte a[5] = { B01111110,B10001000,B10001000,B10001000,B01111110 };
+    //byte a[5] = { B01111110,B10001000,B10001000,B10001000,B01111110 };
     byte r[5] = { B00010000,B00100000,B00100000,B00010000,B00111110 };
     byte d[5] = { B11111110,B00010010,B00100010,B00100010,B00011100 };
     byte u[5] = { B00111110,B00000100,B00000010,B00000010,B00111100 };
@@ -195,12 +230,44 @@ void escribir() {
     byte n[5] = { B00011110,B00100000,B00100000,B00010000,B00111110 };
     byte o[5] = { B00011100,B00100010,B00100010,B00100010,B00011100 };
 
-    /* now display them one by one with a small delay */
-    lc.setRow(0, 0, a[0]);
-    lc.setRow(0, 1, a[1]);
-    lc.setRow(0, 2, a[2]);
-    lc.setRow(0, 3, a[3]);
-    lc.setRow(0, 4, a[4]);
+
+
+    if (a == "RFID") {
+        /* now display them one by one with a small delay */
+        lc.setRow(0, 0, i[0]);
+        lc.setRow(0, 1, i[1]);
+        lc.setRow(0, 2, i[2]);
+        lc.setRow(0, 3, i[3]);
+        lc.setRow(0, 4, i[4]);
+    }
+    else if (a == "RFID OK") {
+        lc.setRow(0, 0, r[0]);
+        lc.setRow(0, 1, r[1]);
+        lc.setRow(0, 2, r[2]);
+        lc.setRow(0, 3, r[3]);
+        lc.setRow(0, 4, r[4]);
+    }
+    else if (a == "TECLADO") {
+        lc.setRow(0, 0, d[0]);
+        lc.setRow(0, 1, d[1]);
+        lc.setRow(0, 2, d[2]);
+        lc.setRow(0, 3, d[3]);
+        lc.setRow(0, 4, d[4]);
+    }
+    else if (a == "TECLADO OK") {
+        lc.setRow(0, 0, o[0]);
+        lc.setRow(0, 1, o[1]);
+        lc.setRow(0, 2, o[2]);
+        lc.setRow(0, 3, o[3]);
+        lc.setRow(0, 4, o[4]);
+    }else if (a == "PUERTA") {
+        lc.setRow(0, 0, n[0]);
+        lc.setRow(0, 1, n[1]);
+        lc.setRow(0, 2, n[2]);
+        lc.setRow(0, 3, n[3]);
+        lc.setRow(0, 4, n[4]);
+    }
+
 }
 
 
