@@ -1,4 +1,12 @@
 //Servo Motor*********************************************************************************************************
+#include <LiquidCrystal.h>
+#include <IRremoteTools.h>
+#include <IRremoteInt.h>
+#include <IRremote.h>
+#include <Multiplexer.h>
+#include <LineFollow.h>
+#include <EasyTransfer2.h>
+#include <ArduinoRobotMotorBoard.h>
 #include <Servo.h>
 Servo myservo;
 
@@ -59,6 +67,15 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance
 
 MFRC522::MIFARE_Key key;
 
+//Matriz******************************************************************************************************************
+#include "LedControl.h"
+LedControl lc = LedControl(12, 10, 11, 1);
+
+
+
+
+
+
 
 //SETUP****************************************************************************************************************
 
@@ -66,12 +83,7 @@ void setup() {
     //Servo******
     puerta(false);
     //**********
-
-    //Motion Sensor***************
-    int ledPin = 13;  // LED on Pin 13 of Arduino
-    int pirPin = 7; // Input for HC-S501
-    int pirValue; // Place to store read PIR Value
-    //*****************************  
+        
 
     //RFID***********************
     Serial.begin(9600);  // Initialize serial communications with the PC
@@ -85,21 +97,73 @@ void setup() {
         key.keyByte[i] = 0xFF;
     }
 
-
+    //matrix************************************************************************************************************************
+    /*
+   The MAX72XX is in power-saving mode on startup,
+   we have to do a wakeup call
+   */
+    lc.shutdown(0, false);
+    /* Set the brightness to a medium values */
+    lc.setIntensity(0, 8);
+    /* and clear the display */
+    lc.clearDisplay(0);
 
 }
 
 void loop() {
-    leer();
+    
+    // Detectar tarjeta
+    if (mfrc522.PICC_IsNewCardPresent())
+    {
+        Serial.print(F("Tarjeta detectada! => "));
+        if (comprobacionRFID()) {
+            escribir();
+        }
+
+        
+    }
+    
 
 }
 
-//Útiles*****************************************************************************************
+
+//RFID***********************
 
 boolean comprobacionRFID() {
-    //Se le pide al usuario que acerque la llave RFID;
-    //Clave RFID correcta;
+    
+    boolean find = false;
+    while(!find) {
+        if (mfrc522.PICC_IsNewCardPresent())
+        {
+            if (mfrc522.PICC_ReadCardSerial())
+            {
+                Serial.print(F("Card UID:"));
+                printArray(mfrc522.uid.uidByte, mfrc522.uid.size);
+                Serial.println();
+
+                // Finalizar lectura actual
+                mfrc522.PICC_HaltA();
+                find = true;
+                return true;
+            }
+        }
+    }
 }
+
+void printArray(byte* buffer, byte bufferSize) {
+    for (byte i = 0; i < bufferSize; i++) {
+        Serial.print(buffer[i] < 0x10 ? " 0" : " ");
+        Serial.print(buffer[i], HEX);
+    }
+}
+
+
+
+
+
+//Ãštiles*****************************************************************************************
+
+
 
 boolean comprobacionTeclado() {
 
@@ -110,26 +174,69 @@ boolean comprobacionTeclado() {
 void puerta(boolean a) {
     if (a == false) { //Cierra la puerta
 
-        myservo.write(0);// move servos to center position -> 90°
+        myservo.write(0);// move servos to center position -> 90Â°
 
     }
     else if (a == true) {//Abre la puerta
 
-        myservo.write(180);// move servos to center position -> 90°
+        myservo.write(180);// move servos to center position -> 90Â°
 
     }
 }
 
-void escribir(String a) {
+void escribir() {
 
+    /* here is the data for the characters */
+    byte a[5] = { B01111110,B10001000,B10001000,B10001000,B01111110 };
+    byte r[5] = { B00010000,B00100000,B00100000,B00010000,B00111110 };
+    byte d[5] = { B11111110,B00010010,B00100010,B00100010,B00011100 };
+    byte u[5] = { B00111110,B00000100,B00000010,B00000010,B00111100 };
+    byte i[5] = { B00000000,B00000010,B10111110,B00100010,B00000000 };
+    byte n[5] = { B00011110,B00100000,B00100000,B00010000,B00111110 };
+    byte o[5] = { B00011100,B00100010,B00100010,B00100010,B00011100 };
 
+    /* now display them one by one with a small delay */
+    lc.setRow(0, 0, a[0]);
+    lc.setRow(0, 1, a[1]);
+    lc.setRow(0, 2, a[2]);
+    lc.setRow(0, 3, a[3]);
+    lc.setRow(0, 4, a[4]);
 }
 
 
 
-//RFID***********************
 
-void leer() {
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*void leer() {
 
     while (true) {
         // Look for new cards, and select one if present
@@ -182,4 +289,4 @@ void leer() {
 
     }
 
-}
+}*/
