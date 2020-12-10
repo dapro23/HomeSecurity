@@ -97,7 +97,15 @@ void loop() {
                 puerta(true);
                 matrixOff();
             }
-        }        
+            else {
+                escribir("F");
+                matrixOff();
+            }
+        }
+        else {
+            escribir("F");
+            matrixOff();
+        }
     }
     
 
@@ -137,18 +145,22 @@ void printArray(byte* buffer, byte bufferSize) {
 //Útiles*****************************************************************************************
 boolean comprobacionTeclado() {
  
-    char temp[5];
-    char customKey;
+    char temp[5];    
     int pos = 0;
     int cur = 0;
 
     //********************PASSWORD
-    char password[4] = { '1','2','3','4' };
+    char password1[4] = { '1','2','3','4' };
+    
     //********************PASSWORD
+    char password2[4] = { '4','3','2','1' };
 
-    boolean out = true;
+    //Longitud_Password*****************************
+    int longitud = 4;
 
-    while (out) {
+    //boolean out = false;
+    /*while (true) {
+        
         customKey = customKeypad.getKey();
         if (customKey == password[pos]) {            
             pos++; // aumentamos posicion si es correcto el digito
@@ -158,10 +170,46 @@ boolean comprobacionTeclado() {
         if (pos == 4) {
             pos = 0;
             cur = 0;            
-            delay(2000);
-            out = false;
+            delay(2000);            
             return true;
         }
+
+        if (customKey == '*') {
+            return false;
+        }
+    
+    }*/
+
+    while (true) {
+
+        char customKey = customKeypad.getKey();
+        pos = 0;
+
+        //Password 1
+        if (customKey == password1[0]) {
+            pos++;
+            escribir("OK");
+            delay(500);
+
+            while (true) {  
+
+                customKey = customKeypad.getKey();
+
+                if (customKey == password1[pos]) {
+                    pos++;                    
+                }
+
+                if (pos == 4) {
+                    pos++;
+                    return true;
+                }
+            }
+        }
+
+        //Password 2
+        
+
+
     }
 
 }
@@ -256,61 +304,11 @@ void escribir(String a) {
         for (int i = 0; i < 8; i++) {
             lc.setRow(0, i, flechaI[i]);
         }        
-    }else if (a == "RFID F"){
-
-        matrixOff();
-        delay(250);
-
-        for (int i = 0; i < 8; i++) {
-            lc.setRow(0, i, f[i]);
-        }
-
-        delay(250);
-        matrixOff();
-        delay(250);
-
-        for (int i = 0; i < 8; i++) {
-            lc.setRow(0, i, f[i]);
-        }
-
-        delay(250);
-        matrixOff();
-        delay(150);
-
-        for (int i = 0; i < 8; i++) {
-            lc.setRow(0, i, f[i]);
-        }
-
     }else if (a == "TECLADO") {
         for (int i = 0; i < 8; i++) {
             lc.setRow(0, i, flechaD[i]);
         }
-    }else if(a == "TECLADO F"){
-
-        matrixOff();
-        delay(250);
-
-        for (int i = 0; i < 8; i++) {
-            lc.setRow(0, i, f[i]);
-        }
-
-        delay(250);
-        matrixOff();
-        delay(250);
-
-        for (int i = 0; i < 8; i++) {
-            lc.setRow(0, i, f[i]);
-        }
-
-        delay(250);
-        matrixOff();
-        delay(150);
-
-        for (int i = 0; i < 8; i++) {
-            lc.setRow(0, i, f[i]);
-        }
-    }    
-    else if (a == "PUERTA") {
+    }else if (a == "PUERTA") {
 
         for (int i = 0; i < 8; i++) {
             lc.setRow(0, i, adelante[i]);
@@ -338,6 +336,31 @@ void escribir(String a) {
 
         for (int i = 0; i < 8; i++) {
             lc.setRow(0, i, ok[i]);
+        }
+
+    }else if (a == "F") {
+
+        matrixOff();
+        delay(250);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, f[i]);
+        }
+
+        delay(250);
+        matrixOff();
+        delay(250);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, f[i]);
+        }
+
+        delay(250);
+        matrixOff();
+        delay(150);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, f[i]);
         }
 
     }
