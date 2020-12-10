@@ -3,8 +3,6 @@
 Servo myservo;
 
 
-
-
 //Keypad*************************************************************************************************************
 #include <Keypad.h>
 const byte ROWS = 4; //four rows
@@ -21,34 +19,7 @@ byte colPins[COLS] = { 28, 26, 24, 22 }; //connect to the column pinouts of the 
 Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
 
-
-
 //RFID******************************************************************************************************************
-/*
- * --------------------------------------------------------------------------------------------------------------------
- * Example to change UID of changeable MIFARE card.
- * --------------------------------------------------------------------------------------------------------------------
- * This is a MFRC522 library example; for further details and other examples see: https://github.com/miguelbalboa/rfid
- *
- * This sample shows how to set the UID on a UID changeable MIFARE card.
- * NOTE: for more informations read the README.rst
- *
- * @author Tom Clement
- * @license Released into the public domain.
- *
- * Typical pin layout used:
- * -----------------------------------------------------------------------------------------
- *             MFRC522      Arduino       Arduino   Arduino    Arduino          Arduino
- *             Reader/PCD   Uno           Mega      Nano v3    Leonardo/Micro   Pro Micro
- * Signal      Pin          Pin           Pin       Pin        Pin              Pin
- * -----------------------------------------------------------------------------------------
- * RST/Reset   RST          9             5         D9         RESET/ICSP-5     RST
- * SPI SS      SDA(SS)      10            53        D10        10               10
- * SPI MOSI    MOSI         11 / ICSP-4   51        D11        ICSP-4           16
- * SPI MISO    MISO         12 / ICSP-1   50        D12        ICSP-1           14
- * SPI SCK     SCK          13 / ICSP-3   52        D13        ICSP-3           15
- */
-
 #include <SPI.h>
 #include <MFRC522.h>
 
@@ -62,18 +33,22 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance
 
 MFRC522::MIFARE_Key key;
 
+
 //Matriz******************************************************************************************************************
 #include "LedControl.h"
 LedControl lc = LedControl(12, 10, 11, 1);
 
 
-
-
+//Sensor Utrasonico*****************************************************************************************************
+#include "SR04.h"
+#define TRIG_PIN 4
+#define ECHO_PIN 3
+SR04 sr04 = SR04(ECHO_PIN, TRIG_PIN);
+long a;
 
 
 
 //SETUP****************************************************************************************************************
-
 void setup() {
     //Servo******
     myservo.attach(7);
@@ -95,37 +70,34 @@ void setup() {
 
     //matrix************************************************************************************************************************
     /*
-   The MAX72XX is in power-saving mode on startup,
-   we have to do a wakeup call
+   The MAX72XX is in power-saving mode on startup, we have to do a wakeup call
    */
     lc.shutdown(0, false);
     /* Set the brightness to a medium values */
     lc.setIntensity(0, 8);
     /* and clear the display */
     lc.clearDisplay(0);
-
 }
 
 void loop() {
-    
+    a = sr04.Distance();
     // Detectar tarjeta
-    if (mfrc522.PICC_IsNewCardPresent())
-    {
-        Serial.print(F("Tarjeta detectada! => "));
+
+    if (a<10)
+    {        
         escribir("RFID");
         delay(500);
         if (comprobacionRFID()) {
-            escribir("RFID OK");
-            delay(1000);
-
+            escribir("OK");
+            delay(500);
             escribir("TECLADO");
             if (comprobacionTeclado()) {
-                escribir("TECLADO OK");
+                escribir("OK");
+                escribir("PUERTA");
                 puerta(true);
+                matrixOff();
             }
-        }
-
-        
+        }        
     }
     
 
@@ -133,7 +105,6 @@ void loop() {
 
 
 //RFID***********************
-
 boolean comprobacionRFID() {
     
     boolean find = false;
@@ -163,12 +134,7 @@ void printArray(byte* buffer, byte bufferSize) {
 }
 
 
-
-
 //Útiles*****************************************************************************************
-
-
-
 boolean comprobacionTeclado() {
  
     char temp[5];
@@ -201,7 +167,7 @@ boolean comprobacionTeclado() {
 }
 
 
-
+//Abrir_Puerta*****************************************************************************************
 void puerta(boolean a) {
     
     if (a == false) { //Cierra la puerta
@@ -212,15 +178,15 @@ void puerta(boolean a) {
     else if (a == true) {//Abre la puerta
 
         myservo.write(180);// move servos to center position -> 90°
-        delay(5000);
+        delay(3000);
         puerta(false);
     }
     
 }
 
 
+//Escribir*****************************************************************************************
 void escribir(String a) {
-
     /* here is the data for the characters */
     //byte a[5] = { B01111110,B10001000,B10001000,B10001000,B01111110 };
     byte r[5] = { B00010000,B00100000,B00100000,B00010000,B00111110 };
@@ -229,131 +195,157 @@ void escribir(String a) {
     byte i[5] = { B00000000,B00000010,B10111110,B00100010,B00000000 };
     byte n[5] = { B00011110,B00100000,B00100000,B00010000,B00111110 };
     byte o[5] = { B00011100,B00100010,B00100010,B00100010,B00011100 };
+    
+    byte flechaD[8] = {
+        B00011000,
+        B00011000,
+        B00011000,
+        B00011000,
+        B10011001,
+        B01011010,
+        B00111100,
+        B00011000
+    };
 
+    byte flechaI[8] = {
+        B00011000,
+        B00111100,
+        B01011010,
+        B10011001,
+        B00011000,
+        B00011000,
+        B00011000,
+        B00011000
+    };
 
+    byte adelante[8] = {
+        B00001000,
+        B00000100,
+        B00000010,
+        B11111111,
+        B11111111,
+        B00000010,
+        B00000100,
+        B00001000
+    };
+
+    byte ok[8] = {
+        B00011000,
+        B00100100,
+        B00100100,
+        B00011000,
+        B00000000,
+        B00111100,
+        B00011000,
+        B00100100
+        
+    };
+    byte f[8] = {
+        B00000000,
+        B00000000,
+        B01111110,
+        B00010010,
+        B00010010,
+        B00000010,
+        B00000000,
+        B00000000
+
+    };
 
     if (a == "RFID") {
-        /* now display them one by one with a small delay */
-        lc.setRow(0, 0, i[0]);
-        lc.setRow(0, 1, i[1]);
-        lc.setRow(0, 2, i[2]);
-        lc.setRow(0, 3, i[3]);
-        lc.setRow(0, 4, i[4]);
-    }
-    else if (a == "RFID OK") {
-        lc.setRow(0, 0, r[0]);
-        lc.setRow(0, 1, r[1]);
-        lc.setRow(0, 2, r[2]);
-        lc.setRow(0, 3, r[3]);
-        lc.setRow(0, 4, r[4]);
-    }
-    else if (a == "TECLADO") {
-        lc.setRow(0, 0, d[0]);
-        lc.setRow(0, 1, d[1]);
-        lc.setRow(0, 2, d[2]);
-        lc.setRow(0, 3, d[3]);
-        lc.setRow(0, 4, d[4]);
-    }
-    else if (a == "TECLADO OK") {
-        lc.setRow(0, 0, o[0]);
-        lc.setRow(0, 1, o[1]);
-        lc.setRow(0, 2, o[2]);
-        lc.setRow(0, 3, o[3]);
-        lc.setRow(0, 4, o[4]);
-    }else if (a == "PUERTA") {
-        lc.setRow(0, 0, n[0]);
-        lc.setRow(0, 1, n[1]);
-        lc.setRow(0, 2, n[2]);
-        lc.setRow(0, 3, n[3]);
-        lc.setRow(0, 4, n[4]);
-    }
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, flechaI[i]);
+        }        
+    }else if (a == "RFID F"){
 
+        matrixOff();
+        delay(250);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, f[i]);
+        }
+
+        delay(250);
+        matrixOff();
+        delay(250);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, f[i]);
+        }
+
+        delay(250);
+        matrixOff();
+        delay(150);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, f[i]);
+        }
+
+    }else if (a == "TECLADO") {
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, flechaD[i]);
+        }
+    }else if(a == "TECLADO F"){
+
+        matrixOff();
+        delay(250);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, f[i]);
+        }
+
+        delay(250);
+        matrixOff();
+        delay(250);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, f[i]);
+        }
+
+        delay(250);
+        matrixOff();
+        delay(150);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, f[i]);
+        }
+    }    
+    else if (a == "PUERTA") {
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, adelante[i]);
+        }
+    }else if (a == "OK"){
+
+        matrixOff();
+        delay(250);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, ok[i]);
+        }
+
+        delay(250);
+        matrixOff();
+        delay(250);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, ok[i]);
+        }
+
+        delay(250);
+        matrixOff();
+        delay(150);
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, ok[i]);
+        }
+
+    }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*void leer() {
-
-    while (true) {
-        // Look for new cards, and select one if present
-        if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
-            delay(50);
-            return;
-        }
-
-        // Now a card is selected. The UID and SAK is in mfrc522.uid.
-
-        // Dump UID
-        Serial.print(F("Card UID:"));
-        for (byte i = 0; i < mfrc522.uid.size; i++) {
-            Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
-            Serial.print(mfrc522.uid.uidByte[i], HEX);
-        }
-        Serial.println();
-
-        // Dump PICC type
-      //  MFRC522::PICC_Type piccType = mfrc522.PICC_GetType(mfrc522.uid.sak);
-      //  Serial.print(F("PICC type: "));
-      //  Serial.print(mfrc522.PICC_GetTypeName(piccType));
-      //  Serial.print(F(" (SAK "));
-      //  Serial.print(mfrc522.uid.sak);
-      //  Serial.print(")\r\n");
-      //  if (  piccType != MFRC522::PICC_TYPE_MIFARE_MINI 
-      //    &&  piccType != MFRC522::PICC_TYPE_MIFARE_1K
-      //    &&  piccType != MFRC522::PICC_TYPE_MIFARE_4K) {
-      //    Serial.println(F("This sample only works with MIFARE Classic cards."));
-      //    return;
-      //  }
-
-        // Set new UID
-        byte newUid[] = NEW_UID;
-        if (mfrc522.MIFARE_SetUid(newUid, (byte)4, true)) {
-            Serial.println(F("Wrote new UID to card."));
-        }
-
-        // Halt PICC and re-select it so DumpToSerial doesn't get confused
-        mfrc522.PICC_HaltA();
-        if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
-            return;
-        }
-
-        // Dump the new memory contents
-        Serial.println(F("New UID and contents:"));
-        mfrc522.PICC_DumpToSerial(&(mfrc522.uid));
-
-        delay(2000);
-
-    }
-
-}*/
+void matrixOff() { 
+    lc.shutdown(0, false);
+    /* Set the brightness to a medium values */
+    lc.setIntensity(0, 8);
+    /* and clear the display */
+    lc.clearDisplay(0);
+}
