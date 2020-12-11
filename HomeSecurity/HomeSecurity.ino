@@ -1,3 +1,6 @@
+#include <Time.h>//Incluimos la librería Time
+
+
 //Servo Motor*********************************************************************************************************
 #include <Servo.h>
 Servo myservo;
@@ -49,7 +52,8 @@ long a;
 
 
 //SETUP****************************************************************************************************************
-void setup() {
+void setup() {    
+
     //Servo******
     myservo.attach(7);
     puerta(false);
@@ -60,8 +64,7 @@ void setup() {
     Serial.begin(9600);  // Initialize serial communications with the PC
     while (!Serial);     // Do nothing if no serial port is opened (added for Arduinos based on ATMEGA32U4)
     SPI.begin();         // Init SPI bus
-    mfrc522.PCD_Init();  // Init MFRC522 card
-    Serial.println(F("Warning: this example overwrites the UID of your UID changeable card, use with care!"));
+    mfrc522.PCD_Init();  // Init MFRC522 card    
 
     // Prepare key - all keys are set to FFFFFFFFFFFFh at chip delivery from the factory.
     for (byte i = 0; i < 6; i++) {
@@ -99,6 +102,9 @@ void loop() {
             }
             else {
                 escribir("F");
+                delay(250);
+                escribir("RFID");
+                delay(250);
                 matrixOff();
             }
         }
@@ -113,25 +119,50 @@ void loop() {
 
 
 //RFID***********************
-boolean comprobacionRFID() {
+boolean comprobacionRFID() { 
     
-    boolean find = false;
-    while(!find) {
+
+    //Clave***************************************
+    byte validKey1[4] = { 0xB9, 0xB5, 0xB5, 0xB0 };
+
+    while(true) {
+
         if (mfrc522.PICC_IsNewCardPresent())
         {
             if (mfrc522.PICC_ReadCardSerial())
             {
+
                 Serial.print(F("Card UID:"));
                 printArray(mfrc522.uid.uidByte, mfrc522.uid.size);
                 Serial.println();
 
-                // Finalizar lectura actual
-                mfrc522.PICC_HaltA();
-                find = true;
-                return true;
+                if (isEqualArray(mfrc522.uid.uidByte, validKey1, 4)) {
+                    Serial.println("Tarjeta valida");
+                    return true;
+                }
+                    
+                else {
+                    Serial.println("Tarjeta invalida");
+                    return false;
+                }
+                    
+
+                
             }
         }
+    
+    
+    
     }
+}
+
+boolean isEqualArray(byte* arrayA, byte* arrayB, int length)
+{
+    for (int index = 0; index < length; index++)
+    {
+        if (arrayA[index] != arrayB[index]) return false;
+    }
+    return true;
 }
 
 void printArray(byte* buffer, byte bufferSize) {
@@ -142,75 +173,70 @@ void printArray(byte* buffer, byte bufferSize) {
 }
 
 
-//Útiles*****************************************************************************************
+//Password*****************************************************************************************
 boolean comprobacionTeclado() {
- 
-    char temp[5];    
+
+    char temp[5];
     int pos = 0;
-    int cur = 0;
-
-    //********************PASSWORD
-    char password1[4] = { '1','2','3','4' };
-    
-    //********************PASSWORD
-    char password2[4] = { '4','3','2','1' };
-
-    //Longitud_Password*****************************
-    int longitud = 4;
-
-    //boolean out = false;
-    /*while (true) {
-        
-        customKey = customKeypad.getKey();
-        if (customKey == password[pos]) {            
-            pos++; // aumentamos posicion si es correcto el digito
-            cur++;
-        }
-
-        if (pos == 4) {
-            pos = 0;
-            cur = 0;            
-            delay(2000);            
-            return true;
-        }
-
-        if (customKey == '*') {
-            return false;
-        }
-    
-    }*/
 
     while (true) {
 
         char customKey = customKeypad.getKey();
-        pos = 0;
 
-        //Password 1
-        if (customKey == password1[0]) {
-            pos++;
-            escribir("OK");
-            delay(500);
-
-            while (true) {  
-
-                customKey = customKeypad.getKey();
-
-                if (customKey == password1[pos]) {
-                    pos++;                    
-                }
-
-                if (pos == 4) {
-                    pos++;
-                    return true;
-                }
-            }
+        if (customKey == '*') {
+            return false;
         }
 
-        //Password 2
+        if (customKey) {
+            temp[pos] = customKey;
+            pos++;   
+            Serial.println(customKey);
+            escribir("DOT");
+        }
+
+        if (pos == 5) {
+            pos = 0;
+            break;
+        }
+
         
 
-
     }
+    if (comprobacionPassword(temp)) {
+        return true;
+    }
+    else {
+        return false;
+    }
+    
+
+}
+
+boolean comprobacionPassword(char password[]) {    
+
+    //********************PASSWORD
+    char password1[5] = { '1','2','3','4','5' };
+
+    //********************PASSWORD
+    char password2[5] = { '5','4','3','2','1' };    
+
+
+    boolean out = false;
+    for (int i = 0; i < 5; i++) {
+        
+        //se agregan tantos if como contraseñas existan
+        if(password[i] == password1[i]) {
+            out = true;            
+        }else if(password[i] == password2[i]) {
+            out = true;           
+        }
+        else {
+            out = false;
+        }
+
+    }    
+
+    return out;
 
 }
 
@@ -236,14 +262,7 @@ void puerta(boolean a) {
 //Escribir*****************************************************************************************
 void escribir(String a) {
     /* here is the data for the characters */
-    //byte a[5] = { B01111110,B10001000,B10001000,B10001000,B01111110 };
-    byte r[5] = { B00010000,B00100000,B00100000,B00010000,B00111110 };
-    byte d[5] = { B11111110,B00010010,B00100010,B00100010,B00011100 };
-    byte u[5] = { B00111110,B00000100,B00000010,B00000010,B00111100 };
-    byte i[5] = { B00000000,B00000010,B10111110,B00100010,B00000000 };
-    byte n[5] = { B00011110,B00100000,B00100000,B00010000,B00111110 };
-    byte o[5] = { B00011100,B00100010,B00100010,B00100010,B00011100 };
-    
+
     byte flechaD[8] = {
         B00011000,
         B00011000,
@@ -300,7 +319,29 @@ void escribir(String a) {
 
     };
 
-    if (a == "RFID") {
+    byte DOT[8] = {
+        B00000000,
+        B00000000,
+        B00000000,
+        B00011000,
+        B00011000,
+        B00000000,
+        B00000000,
+        B00000000
+
+    };
+
+    if(a == "DOT"){
+        matrixOff();
+        
+
+        for (int i = 0; i < 8; i++) {
+            lc.setRow(0, i, DOT[i]);
+        }  
+        delay(250);
+        matrixOff();
+        
+    }else if(a == "RFID") {
         for (int i = 0; i < 8; i++) {
             lc.setRow(0, i, flechaI[i]);
         }        
@@ -356,15 +397,11 @@ void escribir(String a) {
         }
 
         delay(250);
-        matrixOff();
-        delay(150);
-
-        for (int i = 0; i < 8; i++) {
-            lc.setRow(0, i, f[i]);
-        }
+        matrixOff();      
 
     }
 }
+
 void matrixOff() { 
     lc.shutdown(0, false);
     /* Set the brightness to a medium values */
